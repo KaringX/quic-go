@@ -134,4 +134,7 @@ func (h *datagramQueue) Receive(ctx context.Context) ([]byte, error) {
 func (h *datagramQueue) CloseWithError(e error) {
 	h.closeErr = e
 	close(h.closed)
+	h.rcvMx.Lock()      //karing
+	h.sendQueue.Clear() //karing
+	h.rcvMx.Unlock()    //karing
 }

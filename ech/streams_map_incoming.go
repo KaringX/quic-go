@@ -190,6 +190,10 @@ func (m *incomingStreamsMap[T]) CloseWithError(err error) {
 	for _, entry := range m.streams {
 		entry.stream.closeForShutdown(err)
 	}
+	for sn := range m.streams { //karing
+		delete(m.streams, sn)
+	}
+
 	m.mutex.Unlock()
 	close(m.newStreamChan)
 }

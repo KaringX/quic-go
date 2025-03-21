@@ -226,5 +226,11 @@ func (m *outgoingStreamsMap[T]) CloseWithError(err error) {
 			close(c)
 		}
 	}
+	for sn := range m.streams { //karing
+		delete(m.streams, sn)
+	}
+	for k := range m.openQueue { //karing
+		delete(m.openQueue, k)
+	}
 	m.mutex.Unlock()
 }

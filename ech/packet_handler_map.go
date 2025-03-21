@@ -225,4 +225,9 @@ func (h *packetHandlerMap) Close(e error) {
 	h.closed = true
 	h.mutex.Unlock()
 	wg.Wait()
+	h.mutex.Lock()
+	for ci := range h.handlers { //karing
+		delete(h.handlers, ci)
+	}
+	h.mutex.Unlock()
 }
