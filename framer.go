@@ -1,6 +1,7 @@
 package quic
 
 import (
+	"slices"
 	"sync"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/sagernet/quic-go/internal/utils/ringbuffer"
 	"github.com/sagernet/quic-go/internal/wire"
 	"github.com/sagernet/quic-go/quicvarint"
-	"golang.org/x/exp/slices"
 )
 
 const (

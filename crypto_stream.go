@@ -5,7 +5,6 @@ import (
 
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/internal/qerr"
-	"github.com/sagernet/quic-go/internal/utils"
 	"github.com/sagernet/quic-go/internal/wire"
 )
 
@@ -43,7 +42,7 @@ func (s *cryptoStream) HandleCryptoFrame(f *wire.CryptoFrame) error {
 		// could e.g. be a retransmission
 		return nil
 	}
-	s.highestOffset = utils.Max(s.highestOffset, highestOffset)
+	s.highestOffset = max(s.highestOffset, highestOffset)
 	return s.queue.Push(f.Data, f.Offset, nil)
 }
 
@@ -76,7 +75,7 @@ func (s *cryptoStream) HasData() bool {
 
 func (s *cryptoStream) PopCryptoFrame(maxLen protocol.ByteCount) *wire.CryptoFrame {
 	f := &wire.CryptoFrame{Offset: s.writeOffset}
-	n := utils.Min(f.MaxDataLen(maxLen), protocol.ByteCount(len(s.writeBuf)))
+	n := min(f.MaxDataLen(maxLen), protocol.ByteCount(len(s.writeBuf)))
 	f.Data = s.writeBuf[:n]
 	s.writeBuf = s.writeBuf[n:]
 	s.writeOffset += n

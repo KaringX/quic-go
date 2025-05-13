@@ -6,7 +6,7 @@ import (
 	"github.com/sagernet/quic-go/internal/protocol"
 )
 
-type PacketBuffer struct {
+type packetBuffer struct {
 	Data []byte
 
 	// refCount counts how many packets Data is used in.
@@ -18,13 +18,13 @@ type PacketBuffer struct {
 // Split increases the refCount.
 // It must be called when a packet buffer is used for more than one packet,
 // e.g. when splitting coalesced packets.
-func (b *PacketBuffer) Split() {
+func (b *packetBuffer) Split() {
 	b.refCount++
 }
 
 // Decrement decrements the reference counter.
 // It doesn't put the buffer back into the pool.
-func (b *PacketBuffer) Decrement() {
+func (b *packetBuffer) Decrement() {
 	b.refCount--
 	if b.refCount < 0 {
 		panic("negative packetBuffer refCount")
@@ -33,7 +33,7 @@ func (b *PacketBuffer) Decrement() {
 
 // MaybeRelease puts the packet buffer back into the pool,
 // if the reference counter already reached 0.
-func (b *PacketBuffer) MaybeRelease() {
+func (b *packetBuffer) MaybeRelease() {
 	// only put the packetBuffer back if it's not used any more
 	if b.refCount == 0 {
 		b.putBack()
@@ -42,7 +42,7 @@ func (b *PacketBuffer) MaybeRelease() {
 
 // Release puts back the packet buffer into the pool.
 // It should be called when processing is definitely finished.
-func (b *PacketBuffer) Release() {
+func (b *packetBuffer) Release() {
 	b.Decrement()
 	if b.refCount != 0 {
 		panic("packetBuffer refCount not zero")
@@ -51,10 +51,10 @@ func (b *PacketBuffer) Release() {
 }
 
 // Len returns the length of Data
-func (b *PacketBuffer) Len() protocol.ByteCount { return protocol.ByteCount(len(b.Data)) }
-func (b *PacketBuffer) Cap() protocol.ByteCount { return protocol.ByteCount(cap(b.Data)) }
+func (b *packetBuffer) Len() protocol.ByteCount { return protocol.ByteCount(len(b.Data)) }
+func (b *packetBuffer) Cap() protocol.ByteCount { return protocol.ByteCount(cap(b.Data)) }
 
-func (b *PacketBuffer) putBack() {
+func (b *packetBuffer) putBack() {
 	if cap(b.Data) == protocol.MaxPacketBufferSize {
 		bufferPool.Put(b)
 		return
@@ -68,15 +68,15 @@ func (b *PacketBuffer) putBack() {
 
 var bufferPool, largeBufferPool sync.Pool
 
-func GetPacketBuffer() *PacketBuffer {
-	buf := bufferPool.Get().(*PacketBuffer)
+func getPacketBuffer() *packetBuffer {
+	buf := bufferPool.Get().(*packetBuffer)
 	buf.refCount = 1
 	buf.Data = buf.Data[:0]
 	return buf
 }
 
-func GetLargePacketBuffer() *PacketBuffer {
-	buf := largeBufferPool.Get().(*PacketBuffer)
+func getLargePacketBuffer() *packetBuffer {
+	buf := largeBufferPool.Get().(*packetBuffer)
 	buf.refCount = 1
 	buf.Data = buf.Data[:0]
 	return buf
@@ -84,9 +84,9 @@ func GetLargePacketBuffer() *PacketBuffer {
 
 func init() {
 	bufferPool.New = func() any {
-		return &PacketBuffer{Data: make([]byte, 0, protocol.MaxPacketBufferSize)}
+		return &packetBuffer{Data: make([]byte, 0, protocol.MaxPacketBufferSize)}
 	}
 	largeBufferPool.New = func() any {
-		return &PacketBuffer{Data: make([]byte, 0, protocol.MaxLargePacketBufferSize)}
+		return &packetBuffer{Data: make([]byte, 0, protocol.MaxLargePacketBufferSize)}
 	}
 }

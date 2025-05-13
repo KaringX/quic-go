@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptrace"
 	"net/textproto"
@@ -14,7 +15,6 @@ import (
 	"github.com/sagernet/quic-go"
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/quicvarint"
-	"golang.org/x/exp/slog"
 )
 
 const (
@@ -108,24 +108,24 @@ func newClientConn(
 			if c.logger != nil {
 				c.logger.Debug("Setting up connection failed", "error", err)
 			}
-			c.connection.CloseWithError(quic.ApplicationErrorCode(ErrCodeInternalError), "")
+			c.CloseWithError(quic.ApplicationErrorCode(ErrCodeInternalError), "")
 		}
 	}()
 	if streamHijacker != nil {
 		go c.handleBidirectionalStreams(streamHijacker)
 	}
-	go c.connection.handleUnidirectionalStreams(uniStreamHijacker)
+	go c.handleUnidirectionalStreams(uniStreamHijacker)
 	return c
 }
 
 // OpenRequestStream opens a new request stream on the HTTP/3 connection.
 func (c *ClientConn) OpenRequestStream(ctx context.Context) (RequestStream, error) {
-	return c.connection.openRequestStream(ctx, c.requestWriter, nil, c.disableCompression, c.maxResponseHeaderBytes)
+	return c.openRequestStream(ctx, c.requestWriter, nil, c.disableCompression, c.maxResponseHeaderBytes)
 }
 
 func (c *ClientConn) setupConn() error {
 	// open the control stream
-	str, err := c.connection.OpenUniStream()
+	str, err := c.OpenUniStream()
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (c *ClientConn) setupConn() error {
 
 func (c *ClientConn) handleBidirectionalStreams(streamHijacker func(FrameType, quic.ConnectionTracingID, quic.Stream, error) (hijacked bool, err error)) {
 	for {
-		str, err := c.connection.AcceptStream(context.Background())
+		str, err := c.AcceptStream(context.Background())
 		if err != nil {
 			if c.logger != nil {
 				c.logger.Debug("accepting bidirectional stream failed", "error", err)
@@ -150,7 +150,7 @@ func (c *ClientConn) handleBidirectionalStreams(streamHijacker func(FrameType, q
 			r:    str,
 			conn: &c.connection,
 			unknownFrameHandler: func(ft FrameType, e error) (processed bool, err error) {
-				id := c.connection.Context().Value(quic.ConnectionTracingKey).(quic.ConnectionTracingID)
+				id := c.Context().Value(quic.ConnectionTracingKey).(quic.ConnectionTracingID)
 				return streamHijacker(ft, id, str, e)
 			},
 		}
@@ -163,7 +163,7 @@ func (c *ClientConn) handleBidirectionalStreams(streamHijacker func(FrameType, q
 					c.logger.Debug("error handling stream", "error", err)
 				}
 			}
-			c.connection.CloseWithError(quic.ApplicationErrorCode(ErrCodeFrameUnexpected), "received HTTP/3 frame on bidirectional stream")
+			c.CloseWithError(quic.ApplicationErrorCode(ErrCodeFrameUnexpected), "received HTTP/3 frame on bidirectional stream")
 		}()
 	}
 }
@@ -209,17 +209,17 @@ func (c *ClientConn) roundTrip(req *http.Request) (*http.Response, error) {
 		connCtx := c.Connection.Context()
 		// wait for the server's SETTINGS frame to arrive
 		select {
-		case <-c.connection.ReceivedSettings():
+		case <-c.ReceivedSettings():
 		case <-connCtx.Done():
 			return nil, context.Cause(connCtx)
 		}
-		if !c.connection.Settings().EnableExtendedConnect {
+		if !c.Settings().EnableExtendedConnect {
 			return nil, errors.New("http3: server didn't enable Extended CONNECT")
 		}
 	}
 
 	reqDone := make(chan struct{})
-	str, err := c.connection.openRequestStream(
+	str, err := c.openRequestStream(
 		req.Context(),
 		c.requestWriter,
 		reqDone,
@@ -349,7 +349,7 @@ func (c *ClientConn) doRequest(req *http.Request, str *requestStream) (*http.Res
 		}
 		break
 	}
-	connState := c.connection.ConnectionState().TLS
+	connState := c.ConnectionState().TLS
 	res.TLS = &connState
 	res.Request = req
 	return res, nil

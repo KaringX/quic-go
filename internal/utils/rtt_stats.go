@@ -50,7 +50,7 @@ func (r *RTTStats) PTO(includeMaxAckDelay bool) time.Duration {
 	if r.SmoothedRTT() == 0 {
 		return 2 * defaultInitialRTT
 	}
-	pto := r.SmoothedRTT() + Max(4*r.MeanDeviation(), protocol.TimerGranularity)
+	pto := r.SmoothedRTT() + max(4*r.MeanDeviation(), protocol.TimerGranularity)
 	if includeMaxAckDelay {
 		pto += r.MaxAckDelay()
 	}
@@ -107,4 +107,13 @@ func (r *RTTStats) SetInitialRTT(t time.Duration) {
 	}
 	r.smoothedRTT = t
 	r.latestRTT = t
+}
+
+func (r *RTTStats) ResetForPathMigration() {
+	r.hasMeasurement = false
+	r.minRTT = 0
+	r.latestRTT = 0
+	r.smoothedRTT = 0
+	r.meanDeviation = 0
+	// max_ack_delay remains valid
 }

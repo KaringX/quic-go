@@ -10,7 +10,7 @@ import (
 )
 
 // OOBCapablePacketConn is a connection that allows the reading of ECN bits from the IP header.
-// If the PacketConn passed to Dial or Listen satisfies this interface, quic-go will use it.
+// If the PacketConn passed to the [Transport] satisfies this interface, quic-go will use it.
 // In this case, ReadMsgUDP() will be used instead of ReadFrom() to read packets.
 type OOBCapablePacketConn interface {
 	net.PacketConn
@@ -66,11 +66,11 @@ type basicConn struct {
 var _ rawConn = &basicConn{}
 
 func (c *basicConn) ReadPacket() (receivedPacket, error) {
-	buffer := GetPacketBuffer()
+	buffer := getPacketBuffer()
 	// The packet size should not exceed protocol.MaxPacketBufferSize bytes
 	// If it does, we only read a truncated packet, which will then end up undecryptable
 	buffer.Data = buffer.Data[:protocol.MaxPacketBufferSize]
-	n, addr, err := c.PacketConn.ReadFrom(buffer.Data)
+	n, addr, err := c.ReadFrom(buffer.Data)
 	if err != nil {
 		buffer.Release()
 		return receivedPacket{}, err
@@ -90,7 +90,7 @@ func (c *basicConn) WritePacket(b []byte, addr net.Addr, _ []byte, gsoSize uint1
 	if ecn != protocol.ECNUnsupported {
 		panic("cannot use ECN with a basicConn")
 	}
-	return c.PacketConn.WriteTo(b, addr)
+	return c.WriteTo(b, addr)
 }
 
 func (c *basicConn) capabilities() connCapabilities { return connCapabilities{DF: c.supportsDF} }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/sagernet/quic-go"
 	"github.com/sagernet/quic-go/internal/protocol"
-	"golang.org/x/exp/slog"
 	"golang.org/x/net/http/httpguts"
 )
 
@@ -321,7 +321,7 @@ func (t *Transport) dial(ctx context.Context, hostname string) (quic.EarlyConnec
 		tlsConf.ServerName = sni
 	}
 	// Replace existing ALPNs by H3
-	tlsConf.NextProtos = []string{versionToALPN(t.QUICConfig.Versions[0])}
+	tlsConf.NextProtos = []string{NextProtoH3}
 
 	dial := t.Dial
 	if dial == nil {

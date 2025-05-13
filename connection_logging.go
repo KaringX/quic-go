@@ -1,11 +1,12 @@
 package quic
 
 import (
+	"slices"
+
 	"github.com/sagernet/quic-go/internal/ackhandler"
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/internal/wire"
 	"github.com/sagernet/quic-go/logging"
-	"golang.org/x/exp/slices"
 )
 
 // ConvertFrame converts a wire.Frame into a logging.Frame.

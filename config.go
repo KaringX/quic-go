@@ -8,7 +8,7 @@ import (
 	"github.com/sagernet/quic-go/quicvarint"
 )
 
-// Clone clones a Config
+// Clone clones a Config.
 func (c *Config) Clone() *Config {
 	copy := *c
 	return &copy
@@ -125,5 +125,6 @@ func populateConfig(config *Config) *Config {
 		Allow0RTT:                      config.Allow0RTT,
 		Tracer:                         config.Tracer,
 		MaxDatagramFrameSize:           config.MaxDatagramFrameSize,
+		DisablePathManager:             config.DisablePathManager,
 	}
 }
