@@ -1046,6 +1046,7 @@ func (h *sentPacketHandler) SetCongestionControl(cc congestionExt.CongestionCont
 		h.congestion = &ccAdapterEx{ccEx}
 	} else {
 		h.congestion = &ccAdapter{cc}
+	}
 	if cc != nil { //karing
 		cc.SetRTTStatsProvider(h.rttStats)
 		if ccEx, isEx := cc.(congestionExt.CongestionControlEx); isEx {
