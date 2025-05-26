@@ -985,7 +985,7 @@ func (h *sentPacketHandler) ResetForRetry(now time.Time) {
 	// Otherwise, we don't know which Initial the Retry was sent in response to.
 	if h.ptoCount == 0 {
 		// Don't set the RTT to a value lower than 5ms here.
-		h.rttStats.UpdateRTT(max(minRTTAfterRetry, now.Sub(firstPacketSendTime)), 0)
+		h.rttStats.UpdateRTT(utils.Max(minRTTAfterRetry, now.Sub(firstPacketSendTime)), 0)
 		if h.logger.Debug() {
 			h.logger.Debugf("\tupdated RTT: %s (σ: %s)", h.rttStats.SmoothedRTT(), h.rttStats.MeanDeviation())
 		}
@@ -1046,6 +1046,15 @@ func (h *sentPacketHandler) SetCongestionControl(cc congestionExt.CongestionCont
 		h.congestion = &ccAdapterEx{ccEx}
 	} else {
 		h.congestion = &ccAdapter{cc}
+	if cc != nil { //karing
+		cc.SetRTTStatsProvider(h.rttStats)
+		if ccEx, isEx := cc.(congestionExt.CongestionControlEx); isEx {
+			h.congestion = &ccAdapterEx{ccEx}
+		} else {
+			h.congestion = &ccAdapter{cc}
+		}
+	} else { //karing
+		h.congestion = nil
 	}
 	h.congestionMutex.Unlock()
 }
