@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-	"time"
 	"unsafe"
 
+	"github.com/sagernet/quic-go/internal/monotime"
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/internal/utils"
 	"golang.org/x/net/ipv4"
@@ -184,7 +184,7 @@ func (c *oobConn) ReadPacket() (receivedPacket, error) {
 	data := msg.OOB[:msg.NN]
 	p := receivedPacket{
 		remoteAddr: msg.Addr,
-		rcvTime:    time.Now(),
+		rcvTime:    monotime.Now(),
 		data:       msg.Buffers[0][:msg.N],
 		buffer:     buffer,
 	}

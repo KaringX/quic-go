@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/quic-go/qpack"
-
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http2/hpack"
 	"golang.org/x/net/idna"

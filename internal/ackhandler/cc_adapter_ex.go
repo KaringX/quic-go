@@ -1,10 +1,9 @@
 package ackhandler
 
 import (
-	"time"
-
 	"github.com/sagernet/quic-go/congestion"
 	cgInternal "github.com/sagernet/quic-go/internal/congestion"
+	"github.com/sagernet/quic-go/internal/monotime"
 	"github.com/sagernet/quic-go/internal/protocol"
 )
 
@@ -17,15 +16,15 @@ type ccAdapterEx struct {
 	CC congestion.CongestionControlEx
 }
 
-func (a *ccAdapterEx) TimeUntilSend(bytesInFlight protocol.ByteCount) time.Time {
+func (a *ccAdapterEx) TimeUntilSend(bytesInFlight protocol.ByteCount) monotime.Time {
 	return a.CC.TimeUntilSend(congestion.ByteCount(bytesInFlight))
 }
 
-func (a *ccAdapterEx) HasPacingBudget(now time.Time) bool {
+func (a *ccAdapterEx) HasPacingBudget(now monotime.Time) bool {
 	return a.CC.HasPacingBudget(now)
 }
 
-func (a *ccAdapterEx) OnPacketSent(sentTime time.Time, bytesInFlight protocol.ByteCount, packetNumber protocol.PacketNumber, bytes protocol.ByteCount, isRetransmittable bool) {
+func (a *ccAdapterEx) OnPacketSent(sentTime monotime.Time, bytesInFlight protocol.ByteCount, packetNumber protocol.PacketNumber, bytes protocol.ByteCount, isRetransmittable bool) {
 	a.CC.OnPacketSent(sentTime, congestion.ByteCount(bytesInFlight), congestion.PacketNumber(packetNumber), congestion.ByteCount(bytes), isRetransmittable)
 }
 
@@ -37,7 +36,7 @@ func (a *ccAdapterEx) MaybeExitSlowStart() {
 	a.CC.MaybeExitSlowStart()
 }
 
-func (a *ccAdapterEx) OnPacketAcked(number protocol.PacketNumber, ackedBytes protocol.ByteCount, priorInFlight protocol.ByteCount, eventTime time.Time) {
+func (a *ccAdapterEx) OnPacketAcked(number protocol.PacketNumber, ackedBytes protocol.ByteCount, priorInFlight protocol.ByteCount, eventTime monotime.Time) {
 	a.CC.OnPacketAcked(congestion.PacketNumber(number), congestion.ByteCount(ackedBytes), congestion.ByteCount(priorInFlight), eventTime)
 }
 
@@ -45,7 +44,7 @@ func (a *ccAdapterEx) OnCongestionEvent(number protocol.PacketNumber, lostBytes 
 	a.CC.OnCongestionEvent(congestion.PacketNumber(number), congestion.ByteCount(lostBytes), congestion.ByteCount(priorInFlight))
 }
 
-func (a *ccAdapterEx) OnCongestionEventEx(priorInFlight protocol.ByteCount, eventTime time.Time, ackedPackets []congestion.AckedPacketInfo, lostPackets []congestion.LostPacketInfo) {
+func (a *ccAdapterEx) OnCongestionEventEx(priorInFlight protocol.ByteCount, eventTime monotime.Time, ackedPackets []congestion.AckedPacketInfo, lostPackets []congestion.LostPacketInfo) {
 	a.CC.OnCongestionEventEx(congestion.ByteCount(priorInFlight), eventTime, ackedPackets, lostPackets)
 }
 

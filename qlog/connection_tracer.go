@@ -75,6 +75,9 @@ func NewConnectionTracer(w io.WriteCloser, p logging.Perspective, odcid protocol
 		LostPacket: func(encLevel protocol.EncryptionLevel, pn protocol.PacketNumber, lossReason logging.PacketLossReason) {
 			t.LostPacket(encLevel, pn, lossReason)
 		},
+		DetectedSpuriousLoss: func(encLevel protocol.EncryptionLevel, pn protocol.PacketNumber, reordering uint64, dur time.Duration) {
+			t.DetectedSpuriousLoss(encLevel, pn, reordering, dur)
+		},
 		UpdatedMTU: func(mtu logging.ByteCount, done bool) {
 			t.UpdatedMTU(mtu, done)
 		},
@@ -226,6 +229,7 @@ func (t *connectionTracer) toTransportParameters(tp *wire.TransportParameters) *
 		InitialMaxStreamsUni:            int64(tp.MaxUniStreamNum),
 		PreferredAddress:                pa,
 		MaxDatagramFrameSize:            tp.MaxDatagramFrameSize,
+		EnableResetStreamAt:             tp.EnableResetStreamAt,
 	}
 }
 
@@ -366,6 +370,15 @@ func (t *connectionTracer) LostPacket(encLevel protocol.EncryptionLevel, pn prot
 		PacketType:   getPacketTypeFromEncryptionLevel(encLevel),
 		PacketNumber: pn,
 		Trigger:      packetLossReason(lossReason),
+	})
+}
+
+func (t *connectionTracer) DetectedSpuriousLoss(encLevel protocol.EncryptionLevel, pn protocol.PacketNumber, reordering uint64, dur time.Duration) {
+	t.recordEvent(time.Now(), &eventSpuriousLoss{
+		EncLevel:     encLevel,
+		PacketNumber: pn,
+		Reordering:   reordering,
+		Duration:     dur,
 	})
 }
 

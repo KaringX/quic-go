@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/sagernet/quic-go/internal/protocol"
+	"github.com/sagernet/quic-go/monotime"
 )
 
 type (
@@ -13,8 +14,7 @@ type (
 
 // Expose some constants from protocol that congestion control algorithms may need.
 const (
-	InitialPacketSizeIPv4      = protocol.InitialPacketSize
-	InitialPacketSizeIPv6      = protocol.InitialPacketSize
+	InitialPacketSize          = protocol.InitialPacketSize
 	MinPacingDelay             = protocol.MinPacingDelay
 	MaxPacketBufferSize        = protocol.MaxPacketBufferSize
 	MinInitialPacketSize       = protocol.MinInitialPacketSize
@@ -25,7 +25,7 @@ const (
 type AckedPacketInfo struct {
 	PacketNumber PacketNumber
 	BytesAcked   ByteCount
-	ReceivedTime time.Time
+	ReceivedTime monotime.Time
 }
 
 type LostPacketInfo struct {
@@ -35,12 +35,12 @@ type LostPacketInfo struct {
 
 type CongestionControl interface {
 	SetRTTStatsProvider(provider RTTStatsProvider)
-	TimeUntilSend(bytesInFlight ByteCount) time.Time
-	HasPacingBudget(now time.Time) bool
-	OnPacketSent(sentTime time.Time, bytesInFlight ByteCount, packetNumber PacketNumber, bytes ByteCount, isRetransmittable bool)
+	TimeUntilSend(bytesInFlight ByteCount) monotime.Time
+	HasPacingBudget(now monotime.Time) bool
+	OnPacketSent(sentTime monotime.Time, bytesInFlight ByteCount, packetNumber PacketNumber, bytes ByteCount, isRetransmittable bool)
 	CanSend(bytesInFlight ByteCount) bool
 	MaybeExitSlowStart()
-	OnPacketAcked(number PacketNumber, ackedBytes ByteCount, priorInFlight ByteCount, eventTime time.Time)
+	OnPacketAcked(number PacketNumber, ackedBytes ByteCount, priorInFlight ByteCount, eventTime monotime.Time)
 	OnCongestionEvent(number PacketNumber, lostBytes ByteCount, priorInFlight ByteCount)
 	OnRetransmissionTimeout(packetsRetransmitted bool)
 	SetMaxDatagramSize(size ByteCount)
@@ -51,7 +51,7 @@ type CongestionControl interface {
 
 type CongestionControlEx interface {
 	CongestionControl
-	OnCongestionEventEx(priorInFlight ByteCount, eventTime time.Time, ackedPackets []AckedPacketInfo, lostPackets []LostPacketInfo)
+	OnCongestionEventEx(priorInFlight ByteCount, eventTime monotime.Time, ackedPackets []AckedPacketInfo, lostPackets []LostPacketInfo)
 }
 
 type RTTStatsProvider interface {

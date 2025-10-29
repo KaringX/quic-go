@@ -3,10 +3,10 @@ package quic
 import (
 	"slices"
 	"sync"
-	"time"
 
 	"github.com/sagernet/quic-go/internal/ackhandler"
 	"github.com/sagernet/quic-go/internal/flowcontrol"
+	"github.com/sagernet/quic-go/internal/monotime"
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/internal/utils/ringbuffer"
 	"github.com/sagernet/quic-go/internal/wire"
@@ -22,14 +22,18 @@ const (
 // (which is the RESET_STREAM frame).
 const maxStreamControlFrameSize = 25
 
+type streamFrameGetter interface {
+	popStreamFrame(protocol.ByteCount, protocol.Version) (ackhandler.StreamFrame, *wire.StreamDataBlockedFrame, bool)
+}
+
 type streamControlFrameGetter interface {
-	getControlFrame(time.Time) (_ ackhandler.Frame, ok, hasMore bool)
+	getControlFrame(monotime.Time) (_ ackhandler.Frame, ok, hasMore bool)
 }
 
 type framer struct {
 	mutex sync.Mutex
 
-	activeStreams            map[protocol.StreamID]sendStreamI
+	activeStreams            map[protocol.StreamID]streamFrameGetter
 	streamQueue              ringbuffer.RingBuffer[protocol.StreamID]
 	streamsWithControlFrames map[protocol.StreamID]streamControlFrameGetter
 
@@ -42,7 +46,7 @@ type framer struct {
 
 func newFramer(connFlowController flowcontrol.ConnectionFlowController) *framer {
 	return &framer{
-		activeStreams:            make(map[protocol.StreamID]sendStreamI),
+		activeStreams:            make(map[protocol.StreamID]streamFrameGetter),
 		streamsWithControlFrames: make(map[protocol.StreamID]streamControlFrameGetter),
 		connFlowController:       connFlowController,
 	}
@@ -86,7 +90,7 @@ func (f *framer) Append(
 	frames []ackhandler.Frame,
 	streamFrames []ackhandler.StreamFrame,
 	maxLen protocol.ByteCount,
-	now time.Time,
+	now monotime.Time,
 	v protocol.Version,
 ) ([]ackhandler.Frame, []ackhandler.StreamFrame, protocol.ByteCount) {
 	f.controlFrameMutex.Lock()
@@ -153,7 +157,7 @@ func (f *framer) Append(
 func (f *framer) appendControlFrames(
 	frames []ackhandler.Frame,
 	maxLen protocol.ByteCount,
-	now time.Time,
+	now monotime.Time,
 	v protocol.Version,
 ) ([]ackhandler.Frame, protocol.ByteCount) {
 	var length protocol.ByteCount
@@ -209,12 +213,12 @@ func (f *framer) appendControlFrames(
 // This is a hack.
 // It is easier to implement than propagating an error return value in QueueControlFrame.
 // The correct solution would be to queue frames with their respective structs.
-// See https://github.com/sagernet/quic-go/issues/4271 for the queueing of stream-related control frames.
+// See https://github.com/quic-go/quic-go/issues/4271 for the queueing of stream-related control frames.
 func (f *framer) QueuedTooManyControlFrames() bool {
 	return f.queuedTooManyControlFrames
 }
 
-func (f *framer) AddActiveStream(id protocol.StreamID, str sendStreamI) {
+func (f *framer) AddActiveStream(id protocol.StreamID, str streamFrameGetter) {
 	f.mutex.Lock()
 	if _, ok := f.activeStreams[id]; !ok {
 		f.streamQueue.PushBack(id)
