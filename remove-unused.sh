@@ -11,4 +11,7 @@ function remove_unused() {
 remove_unused
 remove_unused
 
+./reformat.sh
+
 go mod tidy
+git commit -a -m "Remove unused"

@@ -6,6 +6,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sagernet/quic-go/internal/monotime"
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/internal/utils"
 )
@@ -54,7 +55,7 @@ func wrapConn(pc net.PacketConn) (rawConn, error) {
 	conn, ok := pc.(interface {
 		SyscallConn() (syscall.RawConn, error)
 	})
-	var supportsDF bool
+	var supportsDF bool = true
 	if ok {
 		rawConn, err := conn.SyscallConn()
 		if err != nil {
@@ -102,7 +103,7 @@ func (c *basicConn) ReadPacket() (receivedPacket, error) {
 	}
 	return receivedPacket{
 		remoteAddr: addr,
-		rcvTime:    time.Now(),
+		rcvTime:    monotime.Now(),
 		data:       buffer.Data[:n],
 		buffer:     buffer,
 	}, nil

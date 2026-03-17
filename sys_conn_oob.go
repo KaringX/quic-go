@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-	"time"
 	"unsafe"
 
+	"github.com/sagernet/quic-go/internal/monotime"
 	"github.com/sagernet/quic-go/internal/protocol"
 	"github.com/sagernet/quic-go/internal/utils"
 	"golang.org/x/net/ipv4"
@@ -184,7 +184,7 @@ func (c *oobConn) ReadPacket() (receivedPacket, error) {
 	data := msg.OOB[:msg.NN]
 	p := receivedPacket{
 		remoteAddr: msg.Addr,
-		rcvTime:    time.Now(),
+		rcvTime:    monotime.Now(),
 		data:       msg.Buffers[0][:msg.N],
 		buffer:     buffer,
 	}
@@ -249,7 +249,13 @@ func (c *oobConn) WritePacket(b []byte, addr net.Addr, packetInfoOOB []byte, gso
 		if !c.capabilities().GSO {
 			panic("GSO disabled")
 		}
-		oob = appendUDPSegmentSizeMsg(oob, gsoSize)
+		// Only request UDP GSO when the payload will actually be segmented.
+		// Some drivers/devices misbehave when UDP_SEGMENT is set for an effectively
+		// single-segment send (segment_size >= payload length). This mirrors quinn-udp's
+		// behavior.
+		if len(b) > int(gsoSize) {
+			oob = appendUDPSegmentSizeMsg(oob, gsoSize)
+		}
 	}
 	if ecn != protocol.ECNUnsupported {
 		if !c.capabilities().ECN {
