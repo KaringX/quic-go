@@ -113,9 +113,10 @@ type sentPacketHandler struct {
 
 	perspective protocol.Perspective
 
-	qlogger     qlogwriter.Recorder
-	lastMetrics qlog.MetricsUpdated
-	logger      utils.Logger
+	qlogger                qlogwriter.Recorder
+	lastMetrics            qlog.MetricsUpdated
+	logger                 utils.Logger
+	initialMaxDatagramSize protocol.ByteCount //karing
 }
 
 var _ SentPacketHandler = &sentPacketHandler{}
@@ -157,6 +158,7 @@ func NewSentPacketHandler(
 		perspective:                    pers,
 		qlogger:                        qlogger,
 		logger:                         logger,
+		initialMaxDatagramSize:         initialMaxDatagramSize, //karing
 	}
 	if enableECN {
 		h.enableECN = true
@@ -1173,6 +1175,7 @@ func (h *sentPacketHandler) MigratedPath(now monotime.Time, initialMaxDatagramSi
 	for pn := range h.appDataPackets.history.PathProbes() {
 		h.appDataPackets.history.RemovePathProbe(pn)
 	}
+	h.initialMaxDatagramSize = initialMaxDatagramSize //karing
 	h.congestion = congestion.NewCubicSender(
 		congestion.DefaultClock{},
 		h.rttStats,
@@ -1192,6 +1195,19 @@ func (h *sentPacketHandler) getCongestionControl() congestion.SendAlgorithmWithD
 }
 
 func (h *sentPacketHandler) SetCongestionControl(cc congestionExt.CongestionControl) {
+	if cc == nil { //karing
+		h.congestionMutex.Lock()
+		h.congestion = congestion.NewCubicSender(
+			congestion.DefaultClock{},
+			h.rttStats,
+			h.connStats,
+			h.initialMaxDatagramSize,
+			true, // use Reno
+			h.qlogger,
+		)
+		h.congestionMutex.Unlock()
+		return
+	}
 	h.congestionMutex.Lock()
 	cc.SetRTTStatsProvider(h.rttStats)
 	if ccEx, isEx := cc.(congestionExt.CongestionControlEx); isEx {
