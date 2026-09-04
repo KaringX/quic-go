@@ -25,6 +25,9 @@ type SentPacketHandler interface {
 	// It is used for pacing packets.
 	TimeUntilSend() monotime.Time
 	SetMaxDatagramSize(count protocol.ByteCount)
+	// SetLastDatagramPadding reports how much room was left in the datagram that
+	// was just packed. It only matters when packet numbers are shortened.
+	SetLastDatagramPadding(protocol.ByteCount)
 
 	// only to be called once the handshake is complete
 	QueueProbePacket(protocol.EncryptionLevel) bool /* was a packet queued */
@@ -40,7 +43,7 @@ type SentPacketHandler interface {
 
 	SetCongestionControl(congestion.CongestionControl)
 
-	// MaybeNotifyAppLimited notifies the congestion controller that the application
-	// has no more data to send, if the cwnd is not fully utilized.
+	// MaybeNotifyAppLimited records that the packer has no data to send. The congestion
+	// controller is notified on the next sent packet.
 	MaybeNotifyAppLimited()
 }

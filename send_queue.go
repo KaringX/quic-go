@@ -9,7 +9,7 @@ import (
 
 type sender interface {
 	Send(p *packetBuffer, gsoSize uint16, ecn protocol.ECN)
-	SendProbe(*packetBuffer, net.Addr)
+	SendProbe(*packetBuffer, net.Addr, packetInfo)
 	Run() error
 	WouldBlock() bool
 	Available() <-chan struct{}
@@ -63,8 +63,8 @@ func (h *sendQueue) Send(p *packetBuffer, gsoSize uint16, ecn protocol.ECN) {
 	}
 }
 
-func (h *sendQueue) SendProbe(p *packetBuffer, addr net.Addr) {
-	h.conn.WriteTo(p.Data, addr)
+func (h *sendQueue) SendProbe(p *packetBuffer, addr net.Addr, info packetInfo) {
+	h.conn.WriteTo(p.Data, addr, info)
 }
 
 func (h *sendQueue) WouldBlock() bool {
@@ -94,7 +94,7 @@ func (h *sendQueue) Run() error {
 				// 2. Path MTU discovery,and
 				// 3. Eventual detection of loss PingFrame.
 				var tooLarge *DatagramTooLargeError
-				if !isSendMsgSizeErr(err) && !errors.As(err, &tooLarge) {
+				if !isSendMsgSizeErr(err) && !isNoBufferSpaceErr(err) && !errors.As(err, &tooLarge) {
 					return err
 				}
 			}
