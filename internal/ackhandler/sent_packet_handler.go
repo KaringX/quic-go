@@ -1330,6 +1330,9 @@ func (h *sentPacketHandler) getCongestionControl() congestionControl {
 }
 
 func (h *sentPacketHandler) SetCongestionControl(cc congestionExt.CongestionControl) {
+	if cc == nil { //karing
+		return
+	}
 	cc.SetRTTStatsProvider(h.rttStats)
 	installed := congestionControl{injected: true}
 	ccEx, isEx := cc.(congestionExt.CongestionControlEx)
